@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { motion, AnimatePresence, useMotionValue, useAnimation, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { 
   Ticket, Star, Clock, Heart, Utensils, Camera, ShoppingBag, X, Gift, Check, Info, 
-  Zap, Sparkles, UtensilsCrossed, Coffee, Cookie, Flower2, CreditCard, Wind
+  Zap, Sparkles, UtensilsCrossed, Coffee, Cookie, Flower2, CreditCard, Wind, Music,
+  Plane, Smile, Tv, Users, Lock, Calendar
 } from 'lucide-react';
 
-// --- DATA: RULES & COUPONS ---
+// --- CONFIGURAÇÕES GERAIS ---
+
+const GLOBAL_VALID_UNTIL = "2026-12-25";
+
+// --- DADOS: REGRAS (RULES) ---
 
 const RAW_RULES = [
   {
@@ -15,6 +20,14 @@ const RAW_RULES = [
     "description": [
       "Este cupom não pode ser usado em dois meses seguidos.",
       "Você pode juntar cupons para uma compra maior, mas precisamos combinar antes (negociável com carinho)."
+    ]
+  },
+  {
+    "id": "r_value_no_change",
+    "title": "Sem Troco",
+    "description": [
+      "O valor do cupom é um teto. Se a compra for menor, não existe 'troco' ou saldo acumulado.",
+      "Pode comprar mais de um item, desde que a soma caiba no valor do cupom."
     ]
   },
   {
@@ -41,6 +54,42 @@ const RAW_RULES = [
     ]
   },
   {
+    "id": "r_photo_no_same_day",
+    "title": "Uma sessão por dia",
+    "description": [
+      "Para garantir a qualidade do fotógrafo (eu), não podemos usar dois cupons de fotos no mesmo dia."
+    ]
+  },
+  {
+    "id": "r_massage_no_same_day",
+    "title": "Limite de Relaxamento",
+    "description": [
+      "A mão do massagista cansa! Não podemos usar mais de um cupom de massagem (comum ou tubarão) no mesmo dia."
+    ]
+  },
+  {
+    "id": "r_movie_no_same_day",
+    "title": "Sessão Única",
+    "description": [
+      "Um filme por dia para a gente curtir bem o momento (e não dormir no segundo)."
+    ]
+  },
+  {
+    "id": "r_anime_max_24",
+    "title": "Limite de Temporada",
+    "description": [
+      "Vale para uma temporada de até 24 episódios. Se for maior, a gente negocia o resto!"
+    ]
+  },
+  {
+    "id": "r_trip_30d_notice",
+    "title": "Planejamento da Viagem",
+    "description": [
+      "Idealmente, avisar com 30 dias de antecedência para a gente organizar tudo perfeito.",
+      "Se surgir uma oportunidade relâmpago, a gente tenta encaixar!"
+    ]
+  },
+  {
     "id": "r_bouquet_10d",
     "title": "Janela do buquê",
     "description": [
@@ -50,16 +99,19 @@ const RAW_RULES = [
   }
 ];
 
+// --- DADOS: CUPONS ---
+
 const RAW_COUPONS = [
+  // --- COMPRAS (300zão) ---
   {
     "id": "cp_shop_300_01",
     "title": "Cupom do 300zão — Parte I",
-    "subtitle": "Você escolhe. Eu sorrio e pago.",
-    "description": "Vale R$300 em compras do jeitinho que você quiser. Pode ser mimo, utilidade, beleza, decoração… você decide.",
+    "subtitle": "Você escolhe. O Vivico sorri e paga.",
+    "description": "Vale R$300 em compras do jeitinho que a YAYA quiser. Pode ser mimo, utilidade, beleza, decoração… você decide.",
     "type": "compras",
     "tags": ["compras", "presentes"],
     "isActive": true,
-    "ruleIds": ["r_shop_300"]
+    "ruleIds": ["r_shop_300", "r_value_no_change"]
   },
   {
     "id": "cp_shop_300_02",
@@ -69,7 +121,7 @@ const RAW_COUPONS = [
     "type": "compras",
     "tags": ["compras", "presentes"],
     "isActive": true,
-    "ruleIds": ["r_shop_300"]
+    "ruleIds": ["r_shop_300", "r_value_no_change"]
   },
   {
     "id": "cp_shop_300_03",
@@ -79,13 +131,37 @@ const RAW_COUPONS = [
     "type": "compras",
     "tags": ["compras", "presentes"],
     "isActive": true,
-    "ruleIds": ["r_shop_300"]
+    "ruleIds": ["r_shop_300", "r_value_no_change"]
+  },
+  {
+    "id": "cp_makeup_300",
+    "title": "Vale Maquiagem",
+    "subtitle": "Para realçar o que já é lindo.",
+    "description": "Vale R$300 exclusivo para itens de maquiagem. Quero ver você se sentindo ainda mais maravilhosa.",
+    "type": "compras",
+    "tags": ["compras", "beleza"],
+    "isActive": true,
+    "ruleIds": ["r_shop_300", "r_value_no_change"]
   },
 
+  // --- ESPECIAL 4 ANOS ---
+  {
+    "id": "cp_surprise_4years",
+    "title": "Surpresa de 4 Anos",
+    "subtitle": "Um segredo guardado para 01/08/2026.",
+    "description": "Este cupom guarda algo muito especial para comemorar nossos 4 anos juntos. Aguarde até a data para descobrir o que o Vivico preparou.",
+    "type": "especial",
+    "tags": ["surpresa", "amor", "4 anos"],
+    "isActive": true,
+    "availableFrom": "2026-08-01",
+    "ruleIds": []
+  },
+
+  // --- ESCAPES / TEMPO ---
   {
     "id": "cp_escape_01",
     "title": "Fuga do Trabalho — Edição Fofa",
-    "subtitle": "Eu sumo do mundo e apareço pra você.",
+    "subtitle": "O Vivico some do mundo e aparece pra YAYA.",
     "description": "Você pode resgatar pra eu dar uma escapada do trabalho e ficar com você. Só preciso de um aviso pra organizar tudo direitinho.",
     "type": "tempo",
     "tags": ["tempo", "romance", "prioridade"],
@@ -105,7 +181,7 @@ const RAW_COUPONS = [
   {
     "id": "cp_escape_super_01",
     "title": "SUPER FUGA — Teleporte Romântico",
-    "subtitle": "Usou, eu vou. Simples assim.",
+    "subtitle": "Usou, o Vivico vai. Simples assim.",
     "description": "Cupom especial: você pode usar a qualquer hora, e eu apareço onde você estiver pra te ver.",
     "type": "tempo",
     "tags": ["tempo", "romance", "lendario"],
@@ -113,15 +189,16 @@ const RAW_COUPONS = [
     "ruleIds": ["r_escape_super"]
   },
 
+  // --- FOTOS ---
   {
     "id": "cp_photo_01",
     "title": "1 Hora de Fotos — Sessão I",
-    "subtitle": "Você brilha. Eu clico.",
+    "subtitle": "A YAYA brilha. O Vivico clica.",
     "description": "Uma hora inteira de fotos com você mandando no estilo. Sem pausas — é sessão de verdade.",
     "type": "experiencia",
     "tags": ["fotos", "experiencias", "carinho"],
     "isActive": true,
-    "ruleIds": ["r_photo_60"]
+    "ruleIds": ["r_photo_60", "r_photo_no_same_day"]
   },
   {
     "id": "cp_photo_02",
@@ -131,7 +208,7 @@ const RAW_COUPONS = [
     "type": "experiencia",
     "tags": ["fotos", "experiencias", "carinho"],
     "isActive": true,
-    "ruleIds": ["r_photo_60"]
+    "ruleIds": ["r_photo_60", "r_photo_no_same_day"]
   },
   {
     "id": "cp_photo_03",
@@ -141,9 +218,10 @@ const RAW_COUPONS = [
     "type": "experiencia",
     "tags": ["fotos", "experiencias", "carinho"],
     "isActive": true,
-    "ruleIds": ["r_photo_60"]
+    "ruleIds": ["r_photo_60", "r_photo_no_same_day"]
   },
 
+  // --- MASSAGENS ---
   {
     "id": "cp_massage_01",
     "title": "Massagem no Pé — 20 min (I)",
@@ -152,17 +230,17 @@ const RAW_COUPONS = [
     "type": "carinho",
     "tags": ["carinho", "bem-estar"],
     "isActive": true,
-    "ruleIds": []
+    "ruleIds": ["r_massage_no_same_day"]
   },
   {
     "id": "cp_massage_02",
     "title": "Massagem no Pé — 20 min (II)",
-    "subtitle": "Relaxamento garantido.",
+    "subtitle": "Relaxamento garantido para a YAYA.",
     "description": "Mais 20 minutos de massagem no pé. Você só precisa resgatar.",
     "type": "carinho",
     "tags": ["carinho", "bem-estar"],
     "isActive": true,
-    "ruleIds": []
+    "ruleIds": ["r_massage_no_same_day"]
   },
   {
     "id": "cp_massage_03",
@@ -172,14 +250,66 @@ const RAW_COUPONS = [
     "type": "carinho",
     "tags": ["carinho", "bem-estar"],
     "isActive": true,
-    "ruleIds": []
+    "ruleIds": ["r_massage_no_same_day"]
+  },
+  // Massagens Tubarão (5x)
+  {
+    "id": "cp_massage_shark_01",
+    "title": "Massagem 🦈 Tubarão (I)",
+    "subtitle": "A famosa. A inigualável.",
+    "description": "Aquela massagem especial 🦈 que você adora.",
+    "type": "carinho",
+    "tags": ["carinho", "tubarão"],
+    "isActive": true,
+    "ruleIds": ["r_massage_no_same_day"]
+  },
+  {
+    "id": "cp_massage_shark_02",
+    "title": "Massagem 🦈 Tubarão (II)",
+    "subtitle": "Mordidinhas de amor.",
+    "description": "Mais uma sessão da massagem 🦈.",
+    "type": "carinho",
+    "tags": ["carinho", "tubarão"],
+    "isActive": true,
+    "ruleIds": ["r_massage_no_same_day"]
+  },
+  {
+    "id": "cp_massage_shark_03",
+    "title": "Massagem 🦈 Tubarão (III)",
+    "subtitle": "Relaxamento predador.",
+    "description": "Sessão de massagem 🦈 garantida.",
+    "type": "carinho",
+    "tags": ["carinho", "tubarão"],
+    "isActive": true,
+    "ruleIds": ["r_massage_no_same_day"]
+  },
+  {
+    "id": "cp_massage_shark_04",
+    "title": "Massagem 🦈 Tubarão (IV)",
+    "subtitle": "Cuidado com o tubarão.",
+    "description": "Sessão de massagem 🦈 do Vivico.",
+    "type": "carinho",
+    "tags": ["carinho", "tubarão"],
+    "isActive": true,
+    "ruleIds": ["r_massage_no_same_day"]
+  },
+  {
+    "id": "cp_massage_shark_05",
+    "title": "Massagem 🦈 Tubarão (V)",
+    "subtitle": "A última da temporada.",
+    "description": "Encerramento com chave de ouro da massagem 🦈.",
+    "type": "carinho",
+    "tags": ["carinho", "tubarão"],
+    "isActive": true,
+    "ruleIds": ["r_massage_no_same_day"]
   },
 
+  // --- COMIDA & ENCONTROS ---
   {
     "id": "cp_dinner_01",
-    "title": "Jantar Completo — Noite I",
+    "title": "Almoço ou Jantar Completo (I)",
     "subtitle": "Entrada, prato, sobremesa… tudo incluso.",
-    "description": "Você escolhe o restaurante e a gente faz uma noite bem gostosa: entrada + principal + sobremesa. Sem economizar no prazer.",
+    "description": "Você escolhe o restaurante e a gente faz uma refeição bem gostosa: entrada + principal + sobremesa. Sem economizar no prazer.",
     "type": "comida",
     "tags": ["comida", "encontro", "experiencias"],
     "isActive": true,
@@ -187,15 +317,46 @@ const RAW_COUPONS = [
   },
   {
     "id": "cp_dinner_02",
-    "title": "Jantar Completo — Noite II",
+    "title": "Almoço ou Jantar Completo (II)",
     "subtitle": "Repetir é viver.",
-    "description": "Mais uma noite com tudo incluso. Você escolhe o lugar e eu cuido do resto.",
+    "description": "Mais uma refeição com tudo incluso. Você escolhe o lugar e o Vivico cuida do resto.",
     "type": "comida",
     "tags": ["comida", "encontro", "experiencias"],
     "isActive": true,
     "ruleIds": []
   },
+  {
+    "id": "cp_dinner_home_01",
+    "title": "Jantar Romântico em Casa (I)",
+    "subtitle": "Eu cozinho, eu sirvo, eu lavo.",
+    "description": "Escolhemos o menu juntos, eu preparo tudo com amor e você não encosta na louça.",
+    "type": "comida",
+    "tags": ["casa", "romance", "experiencias"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_dinner_home_02",
+    "title": "Jantar Romântico em Casa (II)",
+    "subtitle": "Restaurante do Vivico.",
+    "description": "Mais uma noite especial em casa, com serviço completo do seu namorado.",
+    "type": "comida",
+    "tags": ["casa", "romance", "experiencias"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_dinner_home_03",
+    "title": "Jantar Romântico em Casa (III)",
+    "subtitle": "Menu exclusivo da YAYA.",
+    "description": "Terceira rodada do Chef Vivico. Prato principal: Amor.",
+    "type": "comida",
+    "tags": ["casa", "romance", "experiencias"],
+    "isActive": true,
+    "ruleIds": []
+  },
 
+  // --- CAFÉ & DOCES ---
   {
     "id": "cp_coffee_01",
     "title": "Café dos Sonhos — Rodada I",
@@ -226,12 +387,61 @@ const RAW_COUPONS = [
     "isActive": true,
     "ruleIds": []
   },
-
+  {
+    "id": "cp_tea_home_01",
+    "title": "Chá da Tarde em Casa (I)",
+    "subtitle": "Xícaras, biscoitos e nós dois.",
+    "description": "Um momento calmo em casa, com chá quentinho e carinho.",
+    "type": "comida",
+    "tags": ["casa", "carinho", "encontro"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_tea_home_02",
+    "title": "Chá da Tarde em Casa (II)",
+    "subtitle": "Pausa para o amor.",
+    "description": "Mais um chazinho da tarde preparado especialmente pra você.",
+    "type": "comida",
+    "tags": ["casa", "carinho", "encontro"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_tea_home_03",
+    "title": "Chá da Tarde em Casa (III)",
+    "subtitle": "Aconchego garantido.",
+    "description": "Terceiro encontro de chá em casa. Só love.",
+    "type": "comida",
+    "tags": ["casa", "carinho", "encontro"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_tea_home_04",
+    "title": "Chá da Tarde em Casa (IV)",
+    "subtitle": "Doçura na medida certa.",
+    "description": "Preparo tudo pra gente curtir a tarde juntinhos.",
+    "type": "comida",
+    "tags": ["casa", "carinho", "encontro"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_tea_home_05",
+    "title": "Chá da Tarde em Casa (V)",
+    "subtitle": "O último chá (desse pacote).",
+    "description": "Fechando a série de chás da tarde com muito chamego.",
+    "type": "comida",
+    "tags": ["casa", "carinho", "encontro"],
+    "isActive": true,
+    "ruleIds": []
+  },
   {
     "id": "cp_sweet_01",
     "title": "Vale um Docinho — Resgate I",
-    "subtitle": "Tristezinha? Eu mando açúcar e amor.",
-    "description": "Se você estiver meio pra baixo (ou só com vontade), eu mando um docinho/comidinha gostosa onde você estiver (tipo iFood).",
+    "subtitle": "Tristezinha? O Vivico manda açúcar.",
+    "description": "Se você estiver meio pra baixo (ou só com vontade), eu mando um docinho/comidinha gostosa onde você estiver.",
     "type": "carinho",
     "tags": ["docinho", "carinho", "cuidado"],
     "isActive": true,
@@ -258,6 +468,129 @@ const RAW_COUPONS = [
     "ruleIds": []
   },
 
+  // --- PASSEIOS & ENTRETENIMENTO ---
+  {
+    "id": "cp_plaza_01",
+    "title": "Volta na Praça + Água de Coco (I)",
+    "subtitle": "Simplicidade que a gente ama.",
+    "description": "Um passeio leve, conversa boa e hidratação por minha conta.",
+    "type": "passeio",
+    "tags": ["passeio", "leve", "carinho"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_plaza_02",
+    "title": "Volta na Praça + Água de Coco (II)",
+    "subtitle": "Vento no rosto e mão dada.",
+    "description": "Mais uma voltinha pra relaxar a cabeça e curtir a companhia.",
+    "type": "passeio",
+    "tags": ["passeio", "leve", "carinho"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_plaza_03",
+    "title": "Volta na Praça + Água de Coco (III)",
+    "subtitle": "O clássico nunca falha.",
+    "description": "Terceira volta na praça. Água de coco geladinha inclusa.",
+    "type": "passeio",
+    "tags": ["passeio", "leve", "carinho"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_movie_01",
+    "title": "Filme do jeito que a YAYA quiser (I)",
+    "subtitle": "Eu assisto, eu comento, eu curto.",
+    "description": "Você escolhe o filme (qualquer um!) e eu assisto feliz da vida com você.",
+    "type": "entretenimento",
+    "tags": ["filme", "casa", "lazer"],
+    "isActive": true,
+    "ruleIds": ["r_movie_no_same_day"]
+  },
+  {
+    "id": "cp_movie_02",
+    "title": "Filme do jeito que a YAYA quiser (II)",
+    "subtitle": "Pipoca e sua escolha.",
+    "description": "Mais um vale-filme soberano. Sua escolha é uma ordem.",
+    "type": "entretenimento",
+    "tags": ["filme", "casa", "lazer"],
+    "isActive": true,
+    "ruleIds": ["r_movie_no_same_day"]
+  },
+  {
+    "id": "cp_movie_03",
+    "title": "Filme do jeito que a YAYA quiser (III)",
+    "subtitle": "Sessão de cinema em casa.",
+    "description": "Terceiro filme à sua escolha. Prometo não reclamar do gênero!",
+    "type": "entretenimento",
+    "tags": ["filme", "casa", "lazer"],
+    "isActive": true,
+    "ruleIds": ["r_movie_no_same_day"]
+  },
+  {
+    "id": "cp_dorama_01",
+    "title": "Maratona de Dorama (I)",
+    "subtitle": "Do primeiro ao último episódio.",
+    "description": "Vou assistir um dorama inteiro com você, até o fim, comentando e torcendo pelo casal.",
+    "type": "entretenimento",
+    "tags": ["série", "casa", "amor"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_dorama_02",
+    "title": "Maratona de Dorama (II)",
+    "subtitle": "Mais drama, mais romance.",
+    "description": "Mais um dorama completo na conta. Preparado para as emoções.",
+    "type": "entretenimento",
+    "tags": ["série", "casa", "amor"],
+    "isActive": true,
+    "ruleIds": []
+  },
+  {
+    "id": "cp_anime_01",
+    "title": "Temporada de Anime (I)",
+    "subtitle": "Você escolhe, nós assistimos.",
+    "description": "Vale uma temporada inteira de anime (até 24 eps) escolhida por você.",
+    "type": "entretenimento",
+    "tags": ["anime", "série", "lazer"],
+    "isActive": true,
+    "ruleIds": ["r_anime_max_24"]
+  },
+  {
+    "id": "cp_anime_02",
+    "title": "Temporada de Anime (II)",
+    "subtitle": "Otakus apaixonados.",
+    "description": "Segunda temporada de anime à sua escolha.",
+    "type": "entretenimento",
+    "tags": ["anime", "série", "lazer"],
+    "isActive": true,
+    "ruleIds": ["r_anime_max_24"]
+  },
+  {
+    "id": "cp_friends_night",
+    "title": "Saída com as Amigas",
+    "subtitle": "Divirta-se, o Vivico banca.",
+    "description": "Cartão liberado (até R$200) para você curtir com as amigas. Transporte e consumação inclusos.",
+    "type": "lazer",
+    "tags": ["amigas", "lazer", "livre"],
+    "isActive": true,
+    "ruleIds": ["r_value_no_change"]
+  },
+
+  // --- VIAGEM & PRESENTES ---
+  {
+    "id": "cp_weekend_trip",
+    "title": "Viagem de Final de Semana",
+    "subtitle": "Destino escolhido pela YAYA.",
+    "description": "Um fim de semana só nosso. Vamos planejar juntos o destino que você quiser.",
+    "type": "viagem",
+    "tags": ["viagem", "amor", "experiencias"],
+    "isActive": true,
+    "ruleIds": ["r_trip_30d_notice"]
+  },
   {
     "id": "cp_bouquet_01",
     "title": "Vale Buquê",
@@ -271,22 +604,29 @@ const RAW_COUPONS = [
 ];
 
 // Map icons to coupons based on ID pattern
-const getIconForCoupon = (id: string) => {
-  if (id.includes('shop')) return ShoppingBag;
+const getIconForCoupon = (id: string, tags: string[]) => {
+  if (id.includes('surprise')) return Lock;
+  if (tags.includes('tubarão')) return Users; // Placeholder for Shark vibe, or use simple distinct icon
+  if (id.includes('shop') || id.includes('makeup')) return ShoppingBag;
+  if (id.includes('friends')) return Sparkles;
   if (id.includes('escape_super')) return Zap;
   if (id.includes('escape')) return Clock;
   if (id.includes('photo')) return Camera;
-  if (id.includes('massage')) return Sparkles;
+  if (id.includes('massage')) return Star;
   if (id.includes('dinner')) return UtensilsCrossed;
   if (id.includes('coffee')) return Coffee;
+  if (id.includes('tea')) return Coffee; // Tea uses coffee icon or similar
   if (id.includes('sweet')) return Cookie;
   if (id.includes('bouquet')) return Flower2;
+  if (id.includes('trip')) return Plane;
+  if (id.includes('plaza')) return Wind;
+  if (id.includes('movie') || id.includes('dorama') || id.includes('anime')) return Tv;
   return Gift;
 };
 
 const COUPONS = RAW_COUPONS.map(c => ({
   ...c,
-  icon: getIconForCoupon(c.id)
+  icon: getIconForCoupon(c.id, c.tags)
 }));
 
 const ALL_TAGS = ['Todos', ...Array.from(new Set(COUPONS.flatMap(c => c.tags)))];
@@ -317,6 +657,17 @@ function useCouponsState() {
 
   return { redeemedIds, redeemCoupon, isLoaded };
 }
+
+// --- UTILS: DATE CHECK ---
+const isCouponLocked = (availableFrom?: string) => {
+    if (!availableFrom) return false;
+    const today = new Date();
+    // Reset time to ensure we compare dates only if needed, 
+    // but typically raw comparison works for "future date".
+    // Parsing 'YYYY-MM-DD' works in constructor.
+    const availableDate = new Date(availableFrom);
+    return today < availableDate;
+};
 
 // --- COMPONENT: SNOW OVERLAY ---
 
@@ -402,19 +753,32 @@ const SnowOverlay = () => {
 // --- COMPONENT: COUPON CARD (Ticket Style) ---
 
 const CouponCard: React.FC<{ data: typeof COUPONS[0], isRedeemed: boolean, onClick: () => void, index: number }> = ({ data, isRedeemed, onClick, index }) => {
+  const locked = isCouponLocked(data.availableFrom);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, type: 'spring', stiffness: 50 }}
+      initial={{ opacity: 0, scale: 0.9, y: 30, rotate: index % 2 === 0 ? -1 : 1 }}
+      animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+      transition={{ 
+        delay: index * 0.08, 
+        type: 'spring', 
+        damping: 15,
+        stiffness: 100
+      }}
+      whileHover={{ 
+        scale: 1.02, 
+        rotate: isRedeemed ? 0 : (Math.random() - 0.5) * 2,
+        transition: { type: 'spring', stiffness: 400 }
+      }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={`relative w-full cursor-pointer group mb-4 transition-all duration-300 select-none
-        ${isRedeemed ? 'opacity-60 grayscale filter' : 'hover:-translate-y-1'}`}
+        ${isRedeemed ? 'opacity-60 grayscale filter' : ''}
+        ${locked ? 'grayscale-[0.5] opacity-90' : ''}`}
     >
       {/* Container with Scalloped Edges (Mask) */}
       <div className={`relative w-full h-36 mask-scallop-vertical overflow-hidden
-          ${isRedeemed ? 'bg-zinc-800' : 'bg-gradient-to-br from-velvet to-burgundy shadow-xl'}`}>
+          ${isRedeemed ? 'bg-zinc-800' : (locked ? 'bg-gradient-to-br from-zinc-700 to-zinc-900' : 'bg-gradient-to-br from-velvet to-burgundy shadow-xl')}`}>
         
         {/* Paper Texture Overlay */}
         <div className="absolute inset-0 bg-noise opacity-30 mix-blend-overlay pointer-events-none"></div>
@@ -430,6 +794,11 @@ const CouponCard: React.FC<{ data: typeof COUPONS[0], isRedeemed: boolean, onCli
                         ${isRedeemed ? 'text-zinc-500 bg-zinc-900 border border-zinc-700' : 'text-gold-light bg-black/20 border border-gold/20'}`}>
                         {data.tags[0]}
                     </span>
+                    {locked && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-sm text-zinc-300 bg-black/40 border border-zinc-500">
+                           <Lock size={8} /> Bloqueado
+                        </span>
+                    )}
                 </div>
                 <h3 className={`serif text-xl sm:text-2xl font-semibold leading-tight mb-1 truncate
                     ${isRedeemed ? 'text-zinc-500' : 'text-cream drop-shadow-sm'}`}>
@@ -481,55 +850,67 @@ const CouponCard: React.FC<{ data: typeof COUPONS[0], isRedeemed: boolean, onCli
 // --- COMPONENT: REDEMPTION MODAL ---
 
 const RedemptionModal = ({ coupon, isRedeemed, onClose, onRedeem }: { coupon: typeof COUPONS[0], isRedeemed: boolean, onClose: () => void, onRedeem: () => void }) => {
-  const [dragProgress, setDragProgress] = useState(0); // 0 to 1
-  const controls = useAnimation();
+  const [tearState, setTearState] = useState<'idle' | 'tearing' | 'torn'>('idle');
+  const locked = isCouponLocked(coupon.availableFrom);
   
-  // Confetti effect
-  const triggerConfetti = () => {
-    // Simple DOM confetti simulation
-    const colors = ['#d4af37', '#721121', '#ffffff'];
-    for(let i=0; i<40; i++) {
+  // Confetti effect - More Intense
+  const triggerIntenseConfetti = () => {
+    const colors = ['#d4af37', '#ff0000', '#ffffff', '#0f392b', '#FFD700'];
+    const particleCount = 100;
+    
+    for(let i=0; i<particleCount; i++) {
         const el = document.createElement('div');
         el.style.position = 'fixed';
         el.style.left = '50%';
-        el.style.top = '50%';
-        el.style.width = '8px';
-        el.style.height = '8px';
+        el.style.top = '60%'; // Start lower
+        el.style.width = Math.random() > 0.5 ? '10px' : '6px';
+        el.style.height = Math.random() > 0.5 ? '10px' : '6px';
         el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-        el.style.transform = `translate(-50%, -50%) rotate(${Math.random() * 360}deg)`;
         el.style.zIndex = '9999';
         el.style.pointerEvents = 'none';
-        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
         document.body.appendChild(el);
         
-        const destX = (Math.random() - 0.5) * 600;
-        const destY = (Math.random() - 0.5) * 600 - 100; // Tend upwards
-        
+        // Physics simulation using Web Animations API
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = 200 + Math.random() * 400;
+        const tx = Math.cos(angle) * velocity;
+        const ty = Math.sin(angle) * velocity - 200; // biased upwards
+
         const anim = el.animate([
-            { transform: `translate(-50%, -50%) scale(1)`, opacity: 1 },
-            { transform: `translate(calc(-50% + ${destX}px), calc(-50% + ${destY}px)) scale(0) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+            { transform: `translate(-50%, -50%) scale(0) rotate(0deg)`, opacity: 1 },
+            { transform: `translate(calc(-50% + ${tx * 0.5}px), calc(-50% + ${ty * 0.5}px)) scale(1.2) rotate(${Math.random() * 360}deg)`, opacity: 1, offset: 0.4 },
+            { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty + 400}px)) scale(0) rotate(${Math.random() * 720}deg)`, opacity: 0 }
         ], {
-            duration: 1000 + Math.random() * 800,
-            easing: 'cubic-bezier(0, .9, .57, 1)'
+            duration: 1500 + Math.random() * 1000,
+            easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
         });
         
         anim.onfinish = () => el.remove();
     }
   };
 
+  const y = useMotionValue(0);
+  const tearOpacity = useTransform(y, [0, 100], [1, 0.5]);
+  const tearScale = useTransform(y, [0, 150], [1, 0.9]);
+
   const handleDragEnd = (event: any, info: PanInfo) => {
-    if (info.offset.x > 180) { // Threshold to redeem
-      triggerConfetti();
-      onRedeem();
-      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([50, 50, 50]);
-    } else {
-      controls.start({ x: 0 }); // Reset
-    }
+    if (locked) return;
+    if (info.offset.y > 100) { // Dragged down enough
+      setTearState('torn');
+      triggerIntenseConfetti();
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      // Small delay before marking as redeemed in React state to allow animation to play
+      setTimeout(() => {
+        onRedeem();
+      }, 800);
+    } 
   };
 
-  const handleDrag = (event: any, info: PanInfo) => {
-    setDragProgress(Math.min(Math.max(info.offset.x / 200, 0), 1));
-  };
+  // Date formatting for lock message
+  const availableDateFormatted = coupon.availableFrom 
+    ? new Date(coupon.availableFrom).toLocaleDateString('pt-BR') 
+    : '';
 
   return (
     <motion.div 
@@ -542,137 +923,222 @@ const RedemptionModal = ({ coupon, isRedeemed, onClose, onRedeem }: { coupon: ty
       
       <motion.div 
         layoutId={`card-${coupon.id}`}
-        className="relative w-full max-w-md bg-cream rounded-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
-        initial={{ scale: 0.9, y: 50 }}
+        className="relative w-full max-w-md bg-transparent flex flex-col items-center max-h-[85vh] sm:max-h-[90vh]"
+        initial={{ scale: 0.8, y: 100 }}
         animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 50, opacity: 0 }}
+        transition={{ type: "spring", bounce: 0.4, duration: 0.6 }}
+        exit={{ scale: 0.9, opacity: 0 }}
       >
-        {/* Header Image Area / Pattern */}
-        <div className="h-40 bg-gradient-to-br from-velvet to-burgundy relative overflow-hidden flex items-center justify-center shrink-0">
-             {/* Noise Texture */}
-            <div className="absolute inset-0 bg-noise opacity-30 mix-blend-overlay"></div>
-            
-            <div className="absolute inset-0 opacity-20" style={{ 
-                backgroundImage: 'radial-gradient(#d4af37 1px, transparent 1px)', 
-                backgroundSize: '24px 24px' 
-            }}></div>
-            
-            <div className="z-10 drop-shadow-2xl filter transform hover:scale-105 transition-transform duration-300 bg-black/20 p-6 rounded-full border border-gold/30 backdrop-blur-sm">
-                <coupon.icon size={64} strokeWidth={1} className="text-gold-light" />
+        {/* TOP PART (Safe Zone) */}
+        <div className="w-full bg-cream rounded-t-xl shadow-2xl relative z-20 flex flex-col min-h-0">
+             {/* Header Image Area / Pattern */}
+            <div className={`h-36 sm:h-44 relative overflow-hidden flex items-center justify-center shrink-0 group rounded-t-xl
+                ${locked ? 'bg-zinc-800' : 'bg-gradient-to-br from-velvet to-burgundy'}`}>
+                {/* Animated Particles in Header */}
+                <div className="absolute inset-0 overflow-hidden">
+                    {[...Array(8)].map((_, i) => (
+                        <motion.div
+                            key={i}
+                            className="absolute bg-gold rounded-full opacity-40"
+                            initial={{ 
+                                x: Math.random() * 400 - 200, 
+                                y: Math.random() * 200, 
+                                scale: Math.random() * 0.5 + 0.2 
+                            }}
+                            animate={{ 
+                                y: [null, -50],
+                                opacity: [0.4, 0]
+                            }}
+                            transition={{ 
+                                repeat: Infinity, 
+                                duration: 2 + Math.random() * 3,
+                                ease: "linear"
+                            }}
+                            style={{
+                                width: Math.random() * 6 + 2,
+                                height: Math.random() * 6 + 2,
+                                left: '50%',
+                                top: '50%'
+                            }}
+                        />
+                    ))}
+                </div>
+
+                {/* Noise Texture */}
+                <div className="absolute inset-0 bg-noise opacity-30 mix-blend-overlay"></div>
+                
+                <div className="absolute inset-0 opacity-20" style={{ 
+                    backgroundImage: 'radial-gradient(#d4af37 1px, transparent 1px)', 
+                    backgroundSize: '24px 24px' 
+                }}></div>
+                
+                {/* Icon */}
+                <motion.div 
+                    animate={locked ? {} : { scale: [1, 1.05, 1], rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="z-10 drop-shadow-2xl bg-black/20 p-5 sm:p-6 rounded-full border border-gold/30 backdrop-blur-sm shadow-[0_0_30px_rgba(212,175,55,0.3)]"
+                >
+                    {locked ? (
+                        <Lock size={48} strokeWidth={1} className="text-zinc-400 sm:w-16 sm:h-16" />
+                    ) : (
+                        <coupon.icon size={48} strokeWidth={1} className="text-gold-light sm:w-16 sm:h-16" />
+                    )}
+                </motion.div>
+
+                <button 
+                    onClick={onClose} 
+                    className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/10 hover:bg-black/20 rounded-full p-2 transition-colors z-20"
+                >
+                    <X size={20} />
+                </button>
             </div>
 
-            <button 
-                onClick={onClose} 
-                className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/10 hover:bg-black/20 rounded-full p-2 transition-colors z-20"
-            >
-                <X size={20} />
-            </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto custom-scrollbar bg-cream">
-            <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-burgundy mb-2 block">
-                    {coupon.tags.join(' • ')}
-                </span>
-                {isRedeemed && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-zinc-500 bg-zinc-100 px-2 py-1 rounded-full uppercase tracking-wider">
-                        <Check size={12} /> Resgatado
+            {/* Content with Scroll */}
+            <div className="p-5 sm:p-6 bg-cream relative overflow-y-auto custom-scrollbar flex-1 overscroll-contain">
+                <div className="flex justify-between items-start mb-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-burgundy mb-2 block">
+                        {coupon.tags.join(' • ')}
                     </span>
-                )}
-            </div>
-            
-            <h2 className="serif text-3xl sm:text-4xl font-bold text-forest mb-2 leading-none">
-                {coupon.title}
-            </h2>
-            <p className="text-lg text-burgundy/80 font-serif italic mb-6">
-                {coupon.subtitle}
-            </p>
-            
-            <div className="space-y-6">
-                <div>
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Descrição</h4>
-                    <p className="text-slate-700 leading-relaxed text-base">
-                        {coupon.description}
-                    </p>
+                    <span className="text-[10px] text-zinc-400 font-medium">
+                        Válido até 25/12/2026
+                    </span>
                 </div>
                 
-                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-900/60 mb-3">
-                        <Info size={14} /> Regras de Uso
-                    </h4>
-                    {coupon.ruleIds.length > 0 ? (
-                        <div className="space-y-3">
-                            {coupon.ruleIds.map(ruleId => {
-                                const rule = RAW_RULES.find(r => r.id === ruleId);
-                                return rule ? (
-                                    <div key={ruleId}>
-                                        <p className="text-[10px] font-bold text-amber-800/80 uppercase mb-1 tracking-wider">{rule.title}</p>
-                                        <ul className="space-y-1">
-                                            {rule.description.map((desc, i) => (
-                                                <li key={i} className="flex items-start gap-2 text-sm text-amber-900/70">
-                                                    <span className="text-amber-500 mt-1.5 text-[8px]">●</span>
-                                                    {desc}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                ) : null;
-                            })}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-amber-900/60 italic">Sem regras específicas. Aproveite com moderação (ou não)!</p>
-                    )}
+                <h2 className="serif text-3xl sm:text-4xl font-bold text-forest mb-2 leading-none">
+                    {coupon.title}
+                </h2>
+                <p className="text-lg text-burgundy/80 font-serif italic mb-6">
+                    {coupon.subtitle}
+                </p>
+                
+                <div className="space-y-6 pb-2">
+                    <div>
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Descrição</h4>
+                        <p className="text-slate-700 leading-relaxed text-base">
+                            {coupon.description}
+                        </p>
+                    </div>
+                    
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                        <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-900/60 mb-3">
+                            <Info size={14} /> Regras de Uso
+                        </h4>
+                        {coupon.ruleIds.length > 0 ? (
+                            <div className="space-y-3">
+                                {coupon.ruleIds.map(ruleId => {
+                                    const rule = RAW_RULES.find(r => r.id === ruleId);
+                                    return rule ? (
+                                        <div key={ruleId}>
+                                            <p className="text-[10px] font-bold text-amber-800/80 uppercase mb-1 tracking-wider">{rule.title}</p>
+                                            <ul className="space-y-1">
+                                                {rule.description.map((desc, i) => (
+                                                    <li key={i} className="flex items-start gap-2 text-sm text-amber-900/70">
+                                                        <span className="text-amber-500 mt-1.5 text-[8px]">●</span>
+                                                        {desc}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ) : null;
+                                })}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-amber-900/60 italic">Sem regras específicas. Aproveite com moderação (ou não)!</p>
+                        )}
+                    </div>
                 </div>
+            </div>
+
+            {/* SLAMMING STAMP ANIMATION (Positioned absolutely over the Top Part container) */}
+            {isRedeemed && (
+                <motion.div 
+                    initial={{ scale: 3, opacity: 0, rotate: -30 }}
+                    animate={{ scale: 1, opacity: 1, rotate: -15 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.2 }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none z-50"
+                >
+                    <div className="border-8 border-burgundy/80 text-burgundy/90 font-bold text-4xl uppercase tracking-widest px-8 py-4 rounded-xl bg-cream/40 backdrop-blur-[1px] shadow-2xl mix-blend-multiply" style={{ transform: 'rotate(-15deg)' }}>
+                        RESGATADO
+                    </div>
+                </motion.div>
+            )}
+            
+            {/* Perforation Line SVG */}
+            <div className="w-full h-4 bg-cream relative z-20 shrink-0">
+                 <svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none" className="absolute bottom-[-1px] left-0 w-full block text-cream drop-shadow-sm">
+                    <path d="M0,0 L0,16 L100,16 L100,0" fill="currentColor" />
+                 </svg>
+                 {/* Dashed Cut Line */}
+                 <div className="absolute bottom-0 w-full border-b-2 border-dashed border-slate-300"></div>
             </div>
         </div>
 
-        {/* Footer / Interaction Area */}
-        <div className="p-6 bg-white border-t border-slate-100 relative shrink-0">
-            {isRedeemed ? (
-                <div className="text-center py-2">
-                    <p className="text-slate-500 text-sm italic serif mb-4">"Espero que você tenha aproveitado muito! ❤️"</p>
-                    <button onClick={onClose} className="w-full py-3.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm uppercase tracking-wide hover:bg-slate-200 transition-colors">
-                        Voltar
-                    </button>
+        {/* BOTTOM PART (Tearable Footer) */}
+        {!isRedeemed && tearState !== 'torn' && (
+            <motion.div 
+                style={locked ? {} : { y, opacity: tearOpacity, scale: tearScale }}
+                drag={locked ? false : "y"}
+                dragConstraints={{ top: 0, bottom: 150 }}
+                dragElastic={0.2}
+                onDragEnd={handleDragEnd}
+                className={`w-full rounded-b-xl shadow-xl overflow-hidden relative z-10 shrink-0 border-t border-transparent transition-colors
+                    ${locked ? 'bg-zinc-200 cursor-not-allowed' : 'bg-slate-100 cursor-grab active:cursor-grabbing'}`}
+            >
+                {/* Jagged Edge Top */}
+                <div className="absolute top-[-8px] w-full h-4 z-20">
+                     {/* Visual jagged line simulation */}
+                     <div className={`w-full h-full bg-[length:20px_20px] ${locked 
+                        ? 'bg-[linear-gradient(45deg,transparent_33.333%,#e4e4e7_33.333%,#e4e4e7_66.667%,transparent_66.667%),linear-gradient(-45deg,transparent_33.333%,#e4e4e7_33.333%,#e4e4e7_66.667%,transparent_66.667%)]' 
+                        : 'bg-[linear-gradient(45deg,transparent_33.333%,#f1f5f9_33.333%,#f1f5f9_66.667%,transparent_66.667%),linear-gradient(-45deg,transparent_33.333%,#f1f5f9_33.333%,#f1f5f9_66.667%,transparent_66.667%)]'}`}></div>
                 </div>
-            ) : (
-                <div className="relative">
-                     {/* Stub Tearing Interaction */}
-                     <div className="w-full h-16 bg-slate-100 rounded-full overflow-hidden relative flex items-center shadow-inner border border-slate-200">
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 pl-8">
-                            <span className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em] opacity-60">
-                                Deslize para abrir
-                            </span>
-                        </div>
-                        
-                        {/* Progress Fill */}
-                        <motion.div 
-                            className="absolute left-0 top-0 bottom-0 bg-gold/30"
-                            style={{ width: `${dragProgress * 100}%` }}
-                        />
 
-                        {/* Draggable Handle */}
-                        <motion.div
-                            drag="x"
-                            dragConstraints={{ left: 0, right: 280 }} // Approximate width constraint
-                            dragElastic={0.05}
-                            dragMomentum={false}
-                            onDrag={handleDrag}
-                            onDragEnd={handleDragEnd}
-                            animate={controls}
-                            whileTap={{ cursor: "grabbing" }}
-                            className="absolute left-1.5 h-12 w-12 bg-white rounded-full shadow-lg flex items-center justify-center z-20 cursor-grab border border-slate-100 ring-2 ring-gold/20"
-                        >
-                            <Gift size={20} className="text-gold" />
-                        </motion.div>
-                     </div>
-                     <p className="text-center text-[10px] text-slate-400 mt-3">
-                         Ao deslizar completamente, o cupom será marcado como usado.
-                     </p>
+                <div className="p-6 sm:p-8 flex flex-col items-center justify-center text-center">
+                    {locked ? (
+                        <>
+                             <div className="text-zinc-400 mb-2">
+                                <Lock size={24} />
+                            </div>
+                            <p className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em] mb-1">
+                                Bloqueado até {availableDateFormatted}
+                            </p>
+                            <p className="text-[10px] text-zinc-400">
+                                Aguarde a data especial...
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <motion.div 
+                                animate={{ y: [0, 5, 0] }}
+                                transition={{ repeat: Infinity, duration: 1.5 }}
+                                className="text-gold mb-2"
+                            >
+                                <Wind className="rotate-90" />
+                            </motion.div>
+                            <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em] mb-1">
+                                Puxe para baixo para resgatar
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                                (Cuidado, é viciante)
+                            </p>
+                        </>
+                    )}
                 </div>
-            )}
-        </div>
+            </motion.div>
+        )}
+        
+        {isRedeemed && (
+            <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-4 shrink-0"
+            >
+                <button onClick={onClose} className="bg-white/10 hover:bg-white/20 text-cream px-8 py-3 rounded-full font-bold uppercase tracking-wider text-xs border border-white/20 backdrop-blur-md transition-colors shadow-lg">
+                    Fechar
+                </button>
+            </motion.div>
+        )}
+
       </motion.div>
     </motion.div>
   );
@@ -713,12 +1179,21 @@ const App = () => {
                 <div className="inline-block mb-4 p-3 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-lg shadow-black/20">
                     <Gift size={28} className="text-gold" />
                 </div>
-                <h1 className="serif text-5xl font-medium text-cream mb-2 drop-shadow-md tracking-tight">
-                    Cupons de Natal <span className="text-4xl align-middle filter drop-shadow">🎄</span>
+                <h1 className="serif text-4xl sm:text-5xl font-medium text-cream mb-2 drop-shadow-md tracking-tight">
+                    Feliz Natal, YAYA <span className="text-4xl align-middle filter drop-shadow">🎄</span>
                 </h1>
                 <p className="text-cream/70 font-light text-base max-w-xs mx-auto leading-relaxed">
-                    Um presente especial que dura o ano inteiro. <br/>Feito com amor.
+                    Do teu Vivico — um presente que dura o ano inteiro.
                 </p>
+                <p className="text-gold/60 text-[10px] uppercase tracking-widest mt-3 font-bold">
+                    Rumo aos nossos 4 anos em 01/08/2026 ❤️
+                </p>
+                
+                {/* Global Expiration Badge */}
+                <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] text-white/40">
+                    <Calendar size={10} />
+                    <span>Válido até 25/12/2026</span>
+                </div>
             </motion.div>
         </header>
 
@@ -728,6 +1203,7 @@ const App = () => {
             <div className="absolute left-0 top-0 bottom-4 w-6 bg-gradient-to-r from-deep-green to-transparent z-20 pointer-events-none"></div>
             <div className="absolute right-0 top-0 bottom-4 w-6 bg-gradient-to-l from-deep-green to-transparent z-20 pointer-events-none"></div>
             
+            <p className="px-2 mb-2 text-[10px] uppercase tracking-widest text-white/30 font-bold">Escolhe uma categoria, YAYA:</p>
             <div className="flex gap-3 overflow-x-auto pb-4 pt-1 px-2 no-scrollbar scroll-smooth">
                 {ALL_TAGS.map((tag, i) => (
                     <button
@@ -770,7 +1246,7 @@ const App = () => {
         
         {/* Footer Note */}
         <footer className="mt-12 text-center text-white/20 text-[10px] uppercase tracking-widest pb-8">
-            <p>Feito exclusivamente para você ❤️</p>
+            <p>Feito com amor pelo Vivico ❤️</p>
         </footer>
       </main>
 
