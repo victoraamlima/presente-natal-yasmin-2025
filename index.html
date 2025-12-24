@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <title>Cupons de Natal 🎄</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'forest': '#0f392b',
+              'deep-green': '#051b14',
+              'burgundy': '#4a0404', /* Vinho mais profundo */
+              'velvet': '#850000',   /* Vermelho Rico */
+              'cream': '#fdfbf7',
+              'gold': '#d4af37',
+              'gold-light': '#f3e5ab',
+            },
+            fontFamily: {
+              serif: ['"Cormorant Garamond"', 'serif'],
+              sans: ['"Lato"', 'sans-serif'],
+            },
+            backgroundImage: {
+              'noise': "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')",
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+      /* Global Resets */
+      body {
+        background-color: #051b14;
+        color: #fdfbf7;
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior-y: none;
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.05);
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(160, 100, 100, 0.2);
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(160, 100, 100, 0.4);
+      }
+
+      /* 
+         SCALLOPED EDGE MASK (Fixed) 
+         Creates wavy edges on left and right, solid in the middle.
+      */
+      .mask-scallop-vertical {
+        --r: 6px;  /* Radius of the hole */
+        --s: 18px; /* Size of the repeat pattern tile */
+        
+        -webkit-mask: 
+          /* Left Scallops Strip */
+          radial-gradient(circle at 0 50%, #0000 var(--r), #000 calc(var(--r) + 0.5px)) 0 0 / var(--s) var(--s) repeat-y,
+          /* Right Scallops Strip */
+          radial-gradient(circle at 100% 50%, #0000 var(--r), #000 calc(var(--r) + 0.5px)) 100% 0 / var(--s) var(--s) repeat-y,
+          /* Center Solid Block (fills the space between strips) */
+          linear-gradient(#000 0 0) center / calc(100% - 2 * var(--s)) 100% no-repeat;
+          
+        mask: 
+          radial-gradient(circle at 0 50%, #0000 var(--r), #000 calc(var(--r) + 0.5px)) 0 0 / var(--s) var(--s) repeat-y,
+          radial-gradient(circle at 100% 50%, #0000 var(--r), #000 calc(var(--r) + 0.5px)) 100% 0 / var(--s) var(--s) repeat-y,
+          linear-gradient(#000 0 0) center / calc(100% - 2 * var(--s)) 100% no-repeat;
+      }
+      
+      /* Optional: Animation for subtle shimmer */
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+      .animate-shimmer {
+        animation: shimmer 3s infinite linear;
+      }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
